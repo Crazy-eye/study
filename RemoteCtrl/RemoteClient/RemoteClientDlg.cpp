@@ -79,7 +79,7 @@ END_MESSAGE_MAP()
 
 // CRemoteClientDlg 消息处理程序
 
-int CRemoteClientDlg::sendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
+int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
 {
 	UpdateData();       //默认为ture，把控件的值赋给成员变量
 	CClientSocket* pClient = CClientSocket::getInstance();
@@ -94,8 +94,10 @@ int CRemoteClientDlg::sendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, 
 	TRACE("Send ret %d\n", ret);
 	int cmd = pClient->DealCommand();
 	TRACE("ack:%d\n", cmd);
-	pClient->CloseSocket();
-
+	if (bAutoClose)
+	{
+		pClient->CloseSocket();
+	}
 	return cmd;
 }
 
@@ -191,7 +193,7 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	sendCommandPacket(1981);
+	SendCommandPacket(1981);
 
 }
 
@@ -201,7 +203,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	// TODO: 在此添加控件通知处理程序代码
 	//std::list<CPacket> lstPackets;
 	//int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1, true, NULL, 0);
-	int ret = sendCommandPacket(1);
+	int ret = SendCommandPacket(1);
 	if (ret == -1)
 	{
 		AfxMessageBox(_T("命令处理失败!!!"));
@@ -242,9 +244,30 @@ void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
-	HTREEITEM hTree = m_Tree.GetSelectedItem();
-	CString strPath = GetPath(hTree);
+	CPoint ptMouse;           
+	GetCursorPos(&ptMouse);         //拿到鼠标位置 全局坐标，相对屏幕左上角（0，0）
+	m_Tree.ScreenToClient(&ptMouse);//可以检测树控件的点击
+	HTREEITEM hTreeSelected = m_Tree.HitTest(ptMouse, 0);
+	if (hTreeSelected == NULL)
+	{
+		return;
+	}
+	CString strPath = GetPath(hTreeSelected);
+	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	CClientSocket* pClient = CClientSocket::getInstance();
 	//m_List.DeleteAllItems();
+	while (pInfo->HasNext) {
+		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		//if (!pInfo->IsDirectory) {
+		//	m_List.InsertItem(0, pInfo->szFileName);
+		//}
+		int cmd = pClient->DealCommand();
+		TRACE("ack:%d\r\n", cmd);
+		//if (cmd < 0)break;
+		//pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	}
+	pClient->CloseSocket();
 
 
 }

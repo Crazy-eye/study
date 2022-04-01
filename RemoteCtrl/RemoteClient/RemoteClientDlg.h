@@ -42,7 +42,7 @@ private://原创函数
 	// 8 解锁
 	// 1981 测试连接
 	//返回值：命令号，小于零为错误
-	int sendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
+	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
 
 // 实现
 protected:

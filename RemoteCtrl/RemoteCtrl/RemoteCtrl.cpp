@@ -66,21 +66,7 @@ int MakeDriverInfo()  //检查磁盘分区1==A;2==B;3==C...26==Z
 
 #include <io.h>            //文件查找
 #include <list>
-//放到头文件里ClientSocket.h ServerSocket.h
-//typedef struct file_info
-//{
-//    file_info()
-//    {
-//        IsInvalid = FALSE;
-//        IsDirectory = -1;
-//        HasNext = TRUE;
-//        memset(szFilename, 0, sizeof(szFilename));
-//    }
-//    BOOL IsInvalid;        //是否无效
-//    BOOL IsDirectory;      //是否为目录 1是 0否
-//    BOOL HasNext;          //是否有后续 1有 0无
-//    char szFilename[256];  //文件名 目录名
-//}FILEINFO,*PFILEINFO;
+
 
 int MakeDirectoryInfo()     //查看指定目录下的文件
 {
