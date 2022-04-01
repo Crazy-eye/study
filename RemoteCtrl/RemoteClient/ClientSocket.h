@@ -147,20 +147,20 @@ typedef struct MouseEvent
 	POINT ptXY;        //坐标
 }MOUSEEV, * PMOUSEEV;
 
-//typedef struct file_info
-//{
-//	file_info()
-//	{
-//		IsInvalid = FALSE;
-//		IsDirectory = -1;
-//		HasNext = TRUE;
-//		memset(szFileName, 0, sizeof(szFileName));
-//	}
-//	BOOL IsInvalid;        //是否无效
-//	BOOL IsDirectory;      //是否为目录 1是 0否
-//	BOOL HasNext;          //是否有后续 1有 0无
-//	char szFileName[256];  //文件名 目录名
-//}FILEINFO, * PFILEINFO;
+typedef struct file_info
+{
+	file_info()
+	{
+		IsInvalid = FALSE;
+		IsDirectory = -1;
+		HasNext = TRUE;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+	BOOL IsInvalid;        //是否无效
+	BOOL IsDirectory;      //是否为目录 1是 0否
+	BOOL HasNext;          //是否有后续 1有 0无
+	char szFileName[256];  //文件名 目录名
+}FILEINFO, * PFILEINFO;
 
 
 //enum
@@ -194,7 +194,7 @@ typedef struct MouseEvent
 //}PACKET_DATA;
 
 std::string GetErrInfo(int wsaErrCode);
-//void Dump(BYTE* pData, size_t nSize);
+void Dump(BYTE* pData, size_t nSize); 	//代码校验
 class CClientSocket
 {
 public:
@@ -203,11 +203,11 @@ public:
 		if (m_instance == NULL)
 		{
 			m_instance = new CClientSocket();
-			TRACE("CClientSocket size is %d\r\n", sizeof(*m_instance));
+			TRACE("CClientSocket size is %d\r\n", sizeof(*m_instance));  	//代码校验
 		}
 		return m_instance;
 	}
-	bool InitSocket(const std::string& strIPAddress)          //客户端要填服务端ip
+	bool InitSocket(int nIP,int nPort)          //客户端要填服务端ip
 	{
 		//SOCKET m_sock = socket(PF_INET, SOCK_STREAM, 0);         // 协议族，type流tcp，放到构造函数
 		if (m_sock != INVALID_SOCKET)
@@ -222,8 +222,8 @@ public:
 		sockaddr_in serv_adr;
 		memset(&serv_adr, 0, sizeof(serv_adr)); //初始化，清零
 		serv_adr.sin_family = AF_INET;          //地址族
-		serv_adr.sin_addr.s_addr = inet_addr(strIPAddress.c_str());  //服务器ip
-		serv_adr.sin_port = htons(9527);        //端口
+		serv_adr.sin_addr.s_addr = htonl(nIP);  //服务器ip     把host主机字节序转成网络字节序
+		serv_adr.sin_port = htons(nPort);       //端口
 		if (serv_adr.sin_addr.s_addr == INADDR_NONE) //保证connect不出问题
 		{
 			AfxMessageBox("指定IP地址不存在！！！");
@@ -248,11 +248,11 @@ public:
 			return -1;
 		}
 		char* buffer = m_buffer.data();    //可能会收很多数据
-		static size_t index = 0;
+		static size_t index = 0;          	//代码校验
 		while (true)
 		{
 			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
-			if (((int)len <= 0) && ((int)index <= 0))
+			if (((int)len <= 0) && ((int)index <= 0))	//代码校验
 			{
 				return -1;
 			}
@@ -263,7 +263,7 @@ public:
 			m_packet = CPacket((BYTE*)buffer, len);
 			TRACE("command %d\r\n", m_packet.sCmd);
 			if (len > 0) {
-				memmove(buffer, buffer + len, index - len);
+				memmove(buffer, buffer + len, index - len); 	//代码校验
 				index -= len;
 				return m_packet.sCmd;
 			}

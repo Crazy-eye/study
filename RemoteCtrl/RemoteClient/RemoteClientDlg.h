@@ -3,7 +3,11 @@
 //
 
 #pragma once
+#include "ClientSocket.h"
+//#include "StatusDlg.h"
 
+
+#define WM_SEND_PACKET (WM_USER + 1)          //发送数据包的消息    自定义消息 ①消息ID 从WM_USER往后加  
 
 // CRemoteClientDlg 对话框
 class CRemoteClientDlg : public CDialogEx
@@ -20,6 +24,25 @@ public:
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
 
+private://原创函数
+	static void threadEntryForDownFile(void* arg);
+	void threadDownFile();
+	void LoadFileCurrent();
+	void LoadFileInfo();
+	CString GetPath(HTREEITEM hTree);
+	void DeleteTreeChildrenItem(HTREEITEM hTree);
+	// 1 查看磁盘分区
+	// 2 查看指定目录下的文件
+	// 3 打开文件
+	// 4 下载文件
+	// 9 删除文件
+	// 5 鼠标操作
+	// 6 发送屏幕内容
+	// 7 锁机
+	// 8 解锁
+	// 1981 测试连接
+	//返回值：命令号，小于零为错误
+	int sendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
 
 // 实现
 protected:
@@ -33,4 +56,9 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedBtnTest();
+	DWORD m_server_address;
+	CString m_nPort;
+	afx_msg void OnBnClickedBtnFileinfo();
+	CTreeCtrl m_Tree;
+	afx_msg void OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
 };
