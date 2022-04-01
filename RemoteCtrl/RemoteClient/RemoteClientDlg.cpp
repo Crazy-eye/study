@@ -365,7 +365,7 @@ void CRemoteClientDlg::OnDownloadFile()  // 下载文件
 	int nListSelected = m_List.GetSelectionMark();               //获取选择的标记
 	CString strFile = m_List.GetItemText(nListSelected, 0);      //第零个就是第一个数据就是文件名字
 	
-	CFileDialog dlg(FALSE,"",                 //创建文件，扩展名
+	CFileDialog dlg(FALSE,NULL,               //保存文件，扩展名
 		strFile,                              //文件名
 		OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT, //隐藏只读，防止重名
 		NULL,this);                           //过滤器
@@ -380,34 +380,37 @@ void CRemoteClientDlg::OnDownloadFile()  // 下载文件
 		HTREEITEM hSelected = m_Tree.GetSelectedItem();           //获取选中的
 		strFile = GetPath(hSelected) + strFile;
 		TRACE("%s\n", LPCSTR(strFile));
-		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
-		if (ret < 0)
-		{
-			AfxMessageBox(_T("执行下载命令失败！"));
-			TRACE("下载失败 ret = %d\r\n", ret);
-			return;
-		}
 		CClientSocket* pClient = CClientSocket::getInstance();
-		long long nLength = *(long long*)pClient->GetPacket().strData.c_str();
-		if (nLength == 0)
-		{
-			AfxMessageBox("文件长度为0或无法读取文件！！！");
-			return;
-		}
-		long long nCount = 0;
-
-		while ((nCount < nLength))
-		{
-			ret = pClient->DealCommand();
+		do {
+			int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
 			if (ret < 0)
 			{
-				AfxMessageBox("传输失败！");
-				TRACE("传输失败 ret = %d\r\n", ret);
-				break;
+				AfxMessageBox(_T("执行下载命令失败！"));
+				TRACE("下载失败 ret = %d\r\n", ret);
+				break;;
 			}
-			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pFile);
-			nCount += pClient->GetPacket().strData.size();
-		}
+
+			long long nLength = *(long long*)pClient->GetPacket().strData.c_str();
+			if (nLength == 0)
+			{
+				AfxMessageBox("文件长度为0或无法读取文件！！！");
+				break;;
+			}
+			long long nCount = 0;
+
+			while ((nCount < nLength))
+			{
+				ret = pClient->DealCommand();
+				if (ret < 0)
+				{
+					AfxMessageBox("传输失败！");
+					TRACE("传输失败 ret = %d\r\n", ret);
+					break;
+				}
+				fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pFile);
+				nCount += pClient->GetPacket().strData.size();
+			}
+		} while (false);
 		fclose(pFile);
 		pClient->CloseSocket();
 	}
