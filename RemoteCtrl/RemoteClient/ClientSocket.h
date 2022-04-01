@@ -210,6 +210,11 @@ public:
 	bool InitSocket(const std::string& strIPAddress)          //客户端要填服务端ip
 	{
 		//SOCKET m_sock = socket(PF_INET, SOCK_STREAM, 0);         // 协议族，type流tcp，放到构造函数
+		if (m_sock != INVALID_SOCKET)
+		{
+			CloseSocket();
+		}
+		m_sock = socket(PF_INET, SOCK_STREAM, 0);
 		if (m_sock == -1)
 		{
 			return false;
@@ -242,7 +247,7 @@ public:
 		{
 			return -1;
 		}
-		char* buffer = new char[BUFFER_SIZE];      //TODO:多线程发送命令时可能会出现冲突
+		char* buffer = m_buffer.data();    //可能会收很多数据
 		static size_t index = 0;
 		while (true)
 		{
@@ -310,7 +315,7 @@ public:
 	void CloseSocket()
 	{
 		closesocket(m_sock);
-		m_sock = INVALID_SOCKET;
+		m_sock = INVALID_SOCKET;  //无效的套接字 -1
 	}
 	////void UpdateAddress(int nIP, int nPort) {
 	////	if ((m_nIP != nIP) || (m_nPort != nPort)) {
@@ -331,7 +336,7 @@ private:
 	////std::map<HANDLE, bool> m_mapAutoClosed;
 	int m_nIP; //地址
 	int m_nPort;//端口
-	//std::vector<char> m_buffer;
+	std::vector<char> m_buffer;         //内存不需要管理
 	SOCKET m_sock;
 	CPacket m_packet;
 	CClientSocket& operator=(const CClientSocket& serversocket)  //赋值构造函数
@@ -347,7 +352,7 @@ private:
 			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置！"), _T("初始化错误！"), MB_OK | MB_ICONERROR);
 			exit(0);
 		}
-		m_sock = socket(PF_INET, SOCK_STREAM, 0);
+		m_buffer.resize(BUFFER_SIZE);
 	}
 	~CClientSocket()
 	{
