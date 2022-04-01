@@ -72,7 +72,7 @@ public:
 		{
 			strData.resize(nLength - 2 - 2);
 			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
-			TRACE("%s\r\n", strData.c_str() + 12);
+			TRACE("%s\r\n", strData.c_str() + 12);     //有12字节无效file_Info
 			i += nLength - 4;
 		}
 		sSum = *(WORD*)(pData + i);
@@ -194,7 +194,7 @@ typedef struct file_info
 //}PACKET_DATA;
 
 std::string GetErrInfo(int wsaErrCode);
-void Dump(BYTE* pData, size_t nSize); 	//代码校验
+void Dump(BYTE* pData, size_t nSize);
 class CClientSocket
 {
 public:
@@ -248,22 +248,23 @@ public:
 			return -1;
 		}
 		char* buffer = m_buffer.data();    //可能会收很多数据
-		static size_t index = 0;          	//代码校验
+		static size_t index = 0;
 		while (true)
 		{
 			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
-			if (((int)len <= 0) && ((int)index <= 0))	//代码校验
+			if ((len <= 0) && (index <= 0)) //缓存没数据，读到的也没数据
 			{
 				return -1;
 			}
-			TRACE("recv len = %d(0x%08X) index = %d(0x%08X)\r\n", len, len, index, index);
+			Dump((BYTE*)buffer, index);
+			//TRACE("recv len = %d(0x%08X) index = %d(0x%08X)\r\n", len, len, index, index);
 			index += len;
 			len = index;
-			TRACE("recv len = %d(0x%08X) index = %d(0x%08X)\r\n", len, len, index, index);
+			//TRACE("recv len = %d(0x%08X) index = %d(0x%08X)\r\n", len, len, index, index);
 			m_packet = CPacket((BYTE*)buffer, len);
-			TRACE("command %d\r\n", m_packet.sCmd);
+			//TRACE("command %d\r\n", m_packet.sCmd);
 			if (len > 0) {
-				memmove(buffer, buffer + len, index - len); 	//代码校验
+				memmove(buffer, buffer + len, index - len);
 				index -= len;
 				return m_packet.sCmd;
 			}
@@ -353,6 +354,7 @@ private:
 			exit(0);
 		}
 		m_buffer.resize(BUFFER_SIZE);
+		memset(m_buffer.data(), 0, BUFFER_SIZE);
 	}
 	~CClientSocket()
 	{
