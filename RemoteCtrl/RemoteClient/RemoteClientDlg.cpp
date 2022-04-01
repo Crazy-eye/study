@@ -218,7 +218,8 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 		if (drivers[i] == ',')
 		{
 			dr += ":";
-			m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			dr.clear();
 			continue;
 		}
@@ -239,6 +240,18 @@ CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 	return strRet;
 }
 
+void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree)
+{
+	HTREEITEM hSub = NULL;
+	do {
+		hSub = m_Tree.GetChildItem(hTree);       //获取子节点
+		if (hSub != NULL)
+		{
+			m_Tree.DeleteItem(hSub);
+		}
+	} while (hSub != NULL);
+
+}
 
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
@@ -252,20 +265,57 @@ void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 	{
 		return;
 	}
+	if (m_Tree.GetChildItem(hTreeSelected) == NULL)        //文件不获取子目录
+	{
+		return;
+	}
+	DeleteTreeChildrenItem(hTreeSelected);
 	CString strPath = GetPath(hTreeSelected);
 	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	CClientSocket* pClient = CClientSocket::getInstance();
+	
 	//m_List.DeleteAllItems();
-	while (pInfo->HasNext) {
-		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-		//if (!pInfo->IsDirectory) {
-		//	m_List.InsertItem(0, pInfo->szFileName);
+	while (pInfo->HasNext == TRUE)       //只要名字为空，hasnext为false
+	{
+		TRACE(" [%s] isdirectory %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+
+		if (pInfo->IsDirectory)
+		{
+			if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))  //这两个特殊目录排除防止死循环
+			{
+				int cmd = pClient->DealCommand();
+				TRACE("ack:%d\r\n", cmd);
+				if (cmd < 0)
+				{
+					break;
+				}
+				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+
+				continue;
+			}
+			//TRACE("hselected %08X %08X\r\n", hParent, m_Tree.GetSelectedItem());
+
+			//m_Tree.InsertItem("", hTemp, TVI_LAST);
+			//m_Tree.Expand(hParent, TVE_EXPAND);
+		}
+		//else {
+		//	m_List.InsertItem(0, finfo.szFileName);
 		//}
+		HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
+
+		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		if (!pInfo->IsDirectory)
+		{
+			m_Tree.InsertItem("", hTemp, TVI_LAST);
+		}
 		int cmd = pClient->DealCommand();
 		TRACE("ack:%d\r\n", cmd);
-		//if (cmd < 0)break;
-		//pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+		if (cmd < 0)
+		{
+			break;
+		}
+		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	}
 	pClient->CloseSocket();
 
