@@ -65,6 +65,7 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_server_address);
 	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
 	DDX_Control(pDX, IDC_TREE_DIR, m_Tree);
+	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
@@ -74,6 +75,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
 	ON_BN_CLICKED(IDC_BTN_FILEINFO, &CRemoteClientDlg::OnBnClickedBtnFileinfo)
 	ON_NOTIFY(NM_DBLCLK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMDblclkTreeDir)
+	ON_NOTIFY(NM_CLICK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMClickTreeDir)
+	ON_NOTIFY(NM_RCLICK, IDC_LIST_FILE, &CRemoteClientDlg::OnNMRClickListFile)
 END_MESSAGE_MAP()
 
 
@@ -229,6 +232,66 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 }
 
 
+void CRemoteClientDlg::LoadFileInfo()
+{
+	CPoint ptMouse;
+	GetCursorPos(&ptMouse);         //拿到鼠标位置 全局坐标，相对屏幕左上角（0，0）
+	m_Tree.ScreenToClient(&ptMouse);//可以检测树控件的点击
+	HTREEITEM hTreeSelected = m_Tree.HitTest(ptMouse, 0);
+	if (hTreeSelected == NULL)
+	{
+		return;
+	}
+	if (m_Tree.GetChildItem(hTreeSelected) == NULL)        //文件不获取子目录
+	{
+		return;
+	}
+	DeleteTreeChildrenItem(hTreeSelected);
+	m_List.DeleteAllItems();
+	CString strPath = GetPath(hTreeSelected);
+	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	CClientSocket* pClient = CClientSocket::getInstance();
+
+	while (pInfo->HasNext == TRUE)       //只要名字为空，hasnext为false
+	{
+		TRACE(" [%s] isdirectory %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+
+		if (pInfo->IsDirectory)
+		{
+			if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))  //这两个特殊目录排除防止死循环
+			{
+				int cmd = pClient->DealCommand();
+				TRACE("ack:%d\r\n", cmd);
+				if (cmd < 0)
+				{
+					break;
+				}
+				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+
+				continue;
+			}
+			//TRACE("hselected %08X %08X\r\n", hParent, m_Tree.GetSelectedItem());
+			//m_Tree.Expand(hParent, TVE_EXPAND);
+			HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
+			m_Tree.InsertItem("", hTemp, TVI_LAST);
+		}
+		else
+		{
+			m_List.InsertItem(0, pInfo->szFileName);
+		}
+		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		int cmd = pClient->DealCommand();
+		TRACE("ack:%d\r\n", cmd);
+		if (cmd < 0)
+		{
+			break;
+		}
+		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	}
+	pClient->CloseSocket();
+}
+
 CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 {
 	CString strRet, strTmp;
@@ -257,67 +320,37 @@ void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
-	CPoint ptMouse;           
-	GetCursorPos(&ptMouse);         //拿到鼠标位置 全局坐标，相对屏幕左上角（0，0）
-	m_Tree.ScreenToClient(&ptMouse);//可以检测树控件的点击
-	HTREEITEM hTreeSelected = m_Tree.HitTest(ptMouse, 0);
-	if (hTreeSelected == NULL)
+	LoadFileInfo();
+}
+
+
+void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	LoadFileInfo();
+}
+
+
+void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	//右键单击
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	CPoint ptMouse, ptList;
+	GetCursorPos(&ptMouse);
+	ptList = ptMouse;
+	m_List.ScreenToClient(&ptList); //屏幕坐标转换客户端坐标
+	int ListSelected = m_List.HitTest(ptList);
+	if (ListSelected < 0)     //没点中
 	{
 		return;
 	}
-	if (m_Tree.GetChildItem(hTreeSelected) == NULL)        //文件不获取子目录
-	{
-		return;
+	CMenu menu;
+	menu.LoadMenu(IDR_MENU_RCLICK);
+	CMenu* pPupup = menu.GetSubMenu(0);
+	if (pPupup != NULL) {
+		pPupup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptMouse.x, ptMouse.y, this);//左对齐，跟踪右键
 	}
-	DeleteTreeChildrenItem(hTreeSelected);
-	CString strPath = GetPath(hTreeSelected);
-	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
-	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-	CClientSocket* pClient = CClientSocket::getInstance();
-	
-	//m_List.DeleteAllItems();
-	while (pInfo->HasNext == TRUE)       //只要名字为空，hasnext为false
-	{
-		TRACE(" [%s] isdirectory %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-
-		if (pInfo->IsDirectory)
-		{
-			if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))  //这两个特殊目录排除防止死循环
-			{
-				int cmd = pClient->DealCommand();
-				TRACE("ack:%d\r\n", cmd);
-				if (cmd < 0)
-				{
-					break;
-				}
-				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-
-				continue;
-			}
-			//TRACE("hselected %08X %08X\r\n", hParent, m_Tree.GetSelectedItem());
-
-			//m_Tree.InsertItem("", hTemp, TVI_LAST);
-			//m_Tree.Expand(hParent, TVE_EXPAND);
-		}
-		//else {
-		//	m_List.InsertItem(0, finfo.szFileName);
-		//}
-		HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-
-		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-		if (!pInfo->IsDirectory)
-		{
-			m_Tree.InsertItem("", hTemp, TVI_LAST);
-		}
-		int cmd = pClient->DealCommand();
-		TRACE("ack:%d\r\n", cmd);
-		if (cmd < 0)
-		{
-			break;
-		}
-		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-	}
-	pClient->CloseSocket();
-
-
 }
