@@ -235,6 +235,36 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 }
 
 
+void CRemoteClientDlg::LoadFileCurrent()
+{
+	HTREEITEM hTree = m_Tree.GetSelectedItem();
+	CString strPath = GetPath(hTree);
+	m_List.DeleteAllItems();
+	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	CClientSocket* pClient = CClientSocket::getInstance();
+
+	while (pInfo->HasNext == TRUE)       //只要名字为空，hasnext为false
+	{
+		TRACE(" [%s] isdirectory %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+
+		if (!pInfo->IsDirectory)      //只更新文件夹
+		{
+			m_List.InsertItem(0, pInfo->szFileName);
+		}
+		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		int cmd = pClient->DealCommand();
+		TRACE("ack:%d\r\n", cmd);
+		if (cmd < 0)
+		{
+			break;
+		}
+		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	}
+	pClient->CloseSocket();
+
+}
+
 void CRemoteClientDlg::LoadFileInfo()
 {
 	CPoint ptMouse;
@@ -421,16 +451,16 @@ void CRemoteClientDlg::OnDeleteFile()  // 删除文件
 {
 	// TODO: 在此添加命令处理程序代码
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
-	CString strPath = GetPath(hSelected);
-	int nSelected = m_List.GetSelectionMark();
-	CString strFile = m_List.GetItemText(nSelected, 0);
+	CString strPath = GetPath(hSelected);              //拿到路径
+	int nSelected = m_List.GetSelectionMark();         //拿到列表选中的
+	CString strFile = m_List.GetItemText(nSelected, 0);//拿到文件名
 	strFile = strPath + strFile;
-	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 9, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
-	if (ret < 0) {
-		AfxMessageBox("删除文件命令执行失败！！！");
+	int ret = SendCommandPacket(9, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	if (ret < 0)
+	{
+		AfxMessageBox(_T("删除文件命令执行失败！"));
 	}
 	LoadFileCurrent();
-
 }
 
 
@@ -438,13 +468,13 @@ void CRemoteClientDlg::OnRunFile()  // 打开文件
 {
 	// TODO: 在此添加命令处理程序代码
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
-	CString strPath = GetPath(hSelected);
-	int nSelected = m_List.GetSelectionMark();
-	CString strFile = m_List.GetItemText(nSelected, 0);
+	CString strPath = GetPath(hSelected);              //拿到路径
+	int nSelected = m_List.GetSelectionMark();         //拿到列表选中的
+	CString strFile = m_List.GetItemText(nSelected, 0);//拿到文件名
 	strFile = strPath + strFile;
-	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 3, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
-	if (ret < 0) {
-		AfxMessageBox("打开文件命令执行失败！！！");
+	int ret = SendCommandPacket(3, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	if (ret < 0)
+	{
+		AfxMessageBox(_T("打开文件命令执行失败！"));
 	}
-
 }

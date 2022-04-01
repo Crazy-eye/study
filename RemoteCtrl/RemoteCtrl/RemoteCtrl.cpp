@@ -403,7 +403,7 @@ int TestConnect()     //测试包
 
 }
 
-int DeleteLocalFile()
+int DeleteLocalFile()     // 删除文件
 {
     std::string strPath;
     CServerSocket::getInstance()->GetFilePath(strPath);
