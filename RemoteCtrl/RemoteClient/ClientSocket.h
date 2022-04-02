@@ -335,8 +335,8 @@ private:
 	////std::list<CPacket> m_lstSend;
 	////std::map<HANDLE, std::list<CPacket>&> m_mapAck;
 	////std::map<HANDLE, bool> m_mapAutoClosed;
-	int m_nIP; //地址
-	int m_nPort;//端口
+	//int m_nIP; //地址
+	//int m_nPort;//端口
 	std::vector<char> m_buffer;         //内存不需要管理
 	SOCKET m_sock;
 	CPacket m_packet;
