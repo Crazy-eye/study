@@ -66,21 +66,7 @@ int MakeDriverInfo()  //检查磁盘分区1==A;2==B;3==C...26==Z
 
 #include <io.h>            //文件查找
 #include <list>
-//放到头文件里ClientSocket.h ServerSocket.h
-//typedef struct file_info
-//{
-//    file_info()
-//    {
-//        IsInvalid = FALSE;
-//        IsDirectory = -1;
-//        HasNext = TRUE;
-//        memset(szFilename, 0, sizeof(szFilename));
-//    }
-//    BOOL IsInvalid;        //是否无效
-//    BOOL IsDirectory;      //是否为目录 1是 0否
-//    BOOL HasNext;          //是否有后续 1有 0无
-//    char szFilename[256];  //文件名 目录名
-//}FILEINFO,*PFILEINFO;
+
 
 int MakeDirectoryInfo()     //查看指定目录下的文件
 {
@@ -94,10 +80,7 @@ int MakeDirectoryInfo()     //查看指定目录下的文件
     if (_chdir(strPath.c_str()) != 0)     //切换磁盘目录
     {
         FILEINFO finfo;
-        //finfo.IsInvalid = TRUE;
-        //finfo.IsDirectory = TRUE;
         finfo.HasNext = FALSE;
-        //memcpy(finfo.szFilename, strPath.c_str(), strPath.size());
         //lstFileInfos.push_back(finfo);     //list用
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
         CServerSocket::getInstance()->Send(pack);
@@ -352,7 +335,7 @@ unsigned __stdcall threadLockDlg(void* arg)    //子线程  防止在消息循�
     rect.top = 0;
     rect.right = GetSystemMetrics(SM_CXFULLSCREEN); //获取系统参数(x坐标) 1920
     rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);//（本PC测试）1057
-    rect.bottom = (LONG)(rect.bottom * 1.03);                            //覆盖全屏
+    rect.bottom = LONG(rect.bottom * 1.03);                            //覆盖全屏
     TRACE("right=%d bottom=%d \n", rect.right, rect.bottom);
     dlg.MoveWindow(rect);
     //置（z轴）顶窗口
@@ -420,7 +403,7 @@ int TestConnect()     //测试包
 
 }
 
-int DeleteLocalFile()
+int DeleteLocalFile()     // 删除文件
 {
     std::string strPath;
     CServerSocket::getInstance()->GetFilePath(strPath);
