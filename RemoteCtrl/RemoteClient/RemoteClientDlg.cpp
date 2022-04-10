@@ -144,6 +144,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
+	m_isFull = false;
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -237,6 +238,44 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 
 }
 
+
+void CRemoteClientDlg::threadEntryForWatchData(void* arg)
+{
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadWatchData();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatchData()
+{
+	CClientSocket* pClient = NULL;
+	do
+	{
+		CClientSocket* pClient = CClientSocket::getInstance();
+	} while (pClient == NULL);
+	for (;;)
+	{
+		CPacket pack(6, NULL, 0);
+		bool ret = pClient->Send(pack);
+		if (ret)
+		{
+			int cmd = pClient->DealCommand();
+			if (cmd == 6)
+			{
+				if (m_isFull == false)
+				{
+					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+					m_isFull = true;
+				}
+			}
+		}
+		else
+		{
+			Sleep(1);   //当网络拿到了建立连接，网络断掉，send会瞬间返回-1，把cpu资源耗尽卡死
+		}
+		
+	}
+}
 
 void CRemoteClientDlg::threadEntryForDownFile(void* arg)
 {
