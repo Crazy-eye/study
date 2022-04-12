@@ -33,6 +33,10 @@ public://原创函数
 	{
 		return m_image;
 	}
+	void SetImageStatus(bool isFull = false)
+	{
+		m_isFull = isFull;
+	}
 private://原创函数
 	CImage m_image;                                    //缓存图片
 	bool m_isFull;                                     //缓存是否满，true表示有缓存

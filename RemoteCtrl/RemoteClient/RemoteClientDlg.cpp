@@ -251,47 +251,47 @@ void CRemoteClientDlg::threadEntryForWatchData(void* arg)
 
 void CRemoteClientDlg::threadWatchData()
 {
+	Sleep(50);      //现在在对话框之后启动
 	CClientSocket* pClient = NULL;
 	do
 	{
-		CClientSocket* pClient = CClientSocket::getInstance();
+		pClient = CClientSocket::getInstance();
 	} while (pClient == NULL);
 	for (;;)
 	{
-		CPacket pack(6, NULL, 0);
-		bool ret = pClient->Send(pack);
-		if (ret)
+		if (m_isFull == false)//更新数据到缓存
 		{
-			int cmd = pClient->DealCommand();
-			if (cmd == 6)
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
+			if (ret == 6)
 			{
-				if (m_isFull == false)
+				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0); //申请内存
+				if (hMem == NULL)
 				{
-					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0); //申请内存
-					if (hMem == NULL)
-					{
-						TRACE("内存不足！");
-						Sleep(1);     //防止死循环
-						continue;
-					}
-					IStream* pStream = NULL;                      //创建一个流
-					HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
-					if (hRet == S_OK) //判断内存不足
-					{
-						ULONG length = 0;
-						pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
-						LARGE_INTEGER bg = { 0 };
-						pStream->Seek(bg, STREAM_SEEK_SET, NULL);  //跳转到流开头
-						m_image.Load(pStream);                     //load从指定文件加载图像
-						m_isFull = true;
-					}
+					TRACE("内存不足！");
+					Sleep(1);     //防止死循环
+					continue;
 				}
+				IStream* pStream = NULL;                      //创建一个流
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+				if (hRet == S_OK) //判断内存不足
+				{
+					ULONG length = 0;
+					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);  //跳转到流开头
+					m_image.Load(pStream);                     //load从指定文件加载图像
+					m_isFull = true;
+				}
+			}
+			else
+			{
+				Sleep(1);   //当网络拿到了建立连接，网络断掉，send会瞬间返回-1，把cpu资源耗尽卡死
 			}
 		}
 		else
 		{
-			Sleep(1);   //当网络拿到了建立连接，网络断掉，send会瞬间返回-1，把cpu资源耗尽卡死
+			Sleep(1);;
 		}
 		
 	}
@@ -565,8 +565,25 @@ void CRemoteClientDlg::OnRunFile()  // 打开文件
 
 LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)       //④实现消息相应函数
 {
-	CString strFile = (LPCSTR)lParam;
-	int ret = SendCommandPacket(wParam >> 1, wParam & 1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	int ret = 0;
+	int cmd = wParam >> 1;
+	switch (cmd)
+	{
+	case 4:
+	{
+		CString strFile = (LPCSTR)lParam;
+		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	}
+	break;
+	case 6:
+	{
+		ret = SendCommandPacket(cmd, wParam & 1);
+	}
+	break;
+	default:
+		ret = -1;
+		break;
+	}
 	return ret;
 }
 
@@ -574,9 +591,9 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)       //④
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	CWatchDialog dlg(this);
 	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE); //防止启用多个线程，点击一次后禁用按钮
-	CWatchDialog dlg(this);
 	dlg.DoModal();     //模态就防止了多次点击按钮
 }
 
