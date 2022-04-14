@@ -12,6 +12,7 @@
 #define new DEBUG_NEW
 #endif
 #include "ClientSocket.h"
+#include "WatchDialog.h"
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -81,6 +82,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
 	ON_MESSAGE(WM_SEND_PACKET,&CRemoteClientDlg::OnSendPacket)         //添加到消息映射表里，消息函数  ③注册消息
+	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -144,6 +147,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
+	m_isFull = false;
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -237,6 +241,60 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 
 }
 
+
+void CRemoteClientDlg::threadEntryForWatchData(void* arg)  //远程监控界面入口
+{
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadWatchData();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatchData()    //远程监控界面线程
+{
+	Sleep(50);      //现在在对话框之后启动
+	CClientSocket* pClient = NULL;
+	do
+	{
+		pClient = CClientSocket::getInstance();
+	} while (pClient == NULL);
+	for (;;)
+	{
+		if (m_isFull == false)//更新数据到缓存
+		{
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
+			if (ret == 6)
+			{
+				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0); //申请内存
+				if (hMem == NULL)
+				{
+					TRACE("内存不足！");
+					Sleep(1);     //防止死循环
+					continue;
+				}
+				IStream* pStream = NULL;         //创建一个流
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+				if (hRet == S_OK) //判断内存不足
+				{
+					ULONG length = 0;
+					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);  //跳转到流开头
+					m_image.Load(pStream);                     //load从指定文件加载图像
+					m_isFull = true;
+				}
+			}
+			else
+			{
+				Sleep(1);   //当网络拿到了建立连接，网络断掉，send会瞬间返回-1，把cpu资源耗尽卡死
+			}
+		}
+		else
+		{
+			Sleep(1);;
+		}
+	}
+}
 
 void CRemoteClientDlg::threadEntryForDownFile(void* arg)
 {
@@ -420,7 +478,7 @@ void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree)
 
 }
 
-void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult) // 左键双击
 {
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
@@ -428,7 +486,7 @@ void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 }
 
 
-void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult) // 左键单击
 {
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
@@ -436,9 +494,8 @@ void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 }
 
 
-void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
+void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)  // 右键单击
 {
-	//右键单击
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
@@ -489,7 +546,7 @@ void CRemoteClientDlg::OnDeleteFile()  // 删除文件
 }
 
 
-void CRemoteClientDlg::OnRunFile()  // 打开文件
+void CRemoteClientDlg::OnRunFile()  // 打开(运行)文件
 {
 	// TODO: 在此添加命令处理程序代码
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
@@ -506,7 +563,42 @@ void CRemoteClientDlg::OnRunFile()  // 打开文件
 
 LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)       //④实现消息相应函数
 {
-	CString strFile = (LPCSTR)lParam;
-	int ret = SendCommandPacket(wParam >> 1, wParam & 1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	int ret = 0;
+	int cmd = wParam >> 1;
+	switch (cmd)
+	{
+	case 4:
+	{
+		CString strFile = (LPCSTR)lParam;
+		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	}
+	break;
+	case 6:
+	{
+		ret = SendCommandPacket(cmd, wParam & 1);
+	}
+	break;
+	default:
+		ret = -1;
+		break;
+	}
 	return ret;
+}
+
+
+void CRemoteClientDlg::OnBnClickedBtnStartWatch()    //  远程监控按钮
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CWatchDialog dlg(this);
+	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
+	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE); //防止启用多个线程，点击一次后禁用按钮
+	dlg.DoModal();     //模态就防止了多次点击按钮
+}
+
+
+void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	CDialogEx::OnTimer(nIDEvent);
 }

@@ -240,7 +240,7 @@ public:
 	}
 
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 409600
 	int DealCommand()
 	{
 		if (m_sock == -1)
@@ -256,7 +256,7 @@ public:
 			{
 				return -1;
 			}
-			Dump((BYTE*)buffer, index);
+			//Dump((BYTE*)buffer, index);
 			//TRACE("recv len = %d(0x%08X) index = %d(0x%08X)\r\n", len, len, index, index);
 			index += len;
 			len = index;
