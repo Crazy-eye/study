@@ -242,14 +242,14 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 }
 
 
-void CRemoteClientDlg::threadEntryForWatchData(void* arg)
+void CRemoteClientDlg::threadEntryForWatchData(void* arg)  //远程监控界面入口
 {
 	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
 	thiz->threadWatchData();
 	_endthread();
 }
 
-void CRemoteClientDlg::threadWatchData()
+void CRemoteClientDlg::threadWatchData()    //远程监控界面线程
 {
 	Sleep(50);      //现在在对话框之后启动
 	CClientSocket* pClient = NULL;
@@ -272,7 +272,7 @@ void CRemoteClientDlg::threadWatchData()
 					Sleep(1);     //防止死循环
 					continue;
 				}
-				IStream* pStream = NULL;                      //创建一个流
+				IStream* pStream = NULL;         //创建一个流
 				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
 				if (hRet == S_OK) //判断内存不足
 				{
@@ -293,7 +293,6 @@ void CRemoteClientDlg::threadWatchData()
 		{
 			Sleep(1);;
 		}
-		
 	}
 }
 
@@ -479,7 +478,7 @@ void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree)
 
 }
 
-void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult) // 左键双击
 {
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
@@ -487,7 +486,7 @@ void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 }
 
 
-void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult) // 左键单击
 {
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
@@ -495,9 +494,8 @@ void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 }
 
 
-void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
+void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)  // 右键单击
 {
-	//右键单击
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
@@ -548,7 +546,7 @@ void CRemoteClientDlg::OnDeleteFile()  // 删除文件
 }
 
 
-void CRemoteClientDlg::OnRunFile()  // 打开文件
+void CRemoteClientDlg::OnRunFile()  // 打开(运行)文件
 {
 	// TODO: 在此添加命令处理程序代码
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
@@ -588,7 +586,7 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)       //④
 }
 
 
-void CRemoteClientDlg::OnBnClickedBtnStartWatch()
+void CRemoteClientDlg::OnBnClickedBtnStartWatch()    //  远程监控按钮
 {
 	// TODO: 在此添加控件通知处理程序代码
 	CWatchDialog dlg(this);

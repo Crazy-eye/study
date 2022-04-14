@@ -62,7 +62,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			pParent->GetImage().StretchBlt(        //缩放
 				m_picture.GetDC()->GetSafeHdc(), 0, 0,
 				rect.Width(), rect.Height(), SRCCOPY);
-			m_picture.InvalidateRect(NULL); //重绘
+			m_picture.InvalidateRect(NULL); //重绘，显示出来
 			pParent->GetImage().Destroy();
 			pParent->SetImageStatus();
 		}
