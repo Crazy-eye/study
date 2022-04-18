@@ -257,7 +257,7 @@ public:
 		{
 			return false;
 		}
-		Dump((BYTE*)pack.Data(), pack.Size());//调试用，要注释掉
+		//Dump((BYTE*)pack.Data(), pack.Size());//调试用，要注释掉
 		return send(m_client, pack.Data(), pack.Size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath)

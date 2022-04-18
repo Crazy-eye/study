@@ -142,7 +142,8 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData();     //默认为ture，把控件的值赋给成员变量
-	m_server_address = 0x7F000001;
+	//m_server_address = 0x7F000001;//127.0.0.1
+	m_server_address = 0xC0A80064;//192.168.0.100 
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
@@ -257,7 +258,7 @@ void CRemoteClientDlg::threadWatchData()    //远程监控界面线程
 	{
 		pClient = CClientSocket::getInstance();
 	} while (pClient == NULL);
-	for (;;)
+	while (!m_isClosed)
 	{
 		if (m_isFull == false)//更新数据到缓存
 		{
@@ -280,6 +281,10 @@ void CRemoteClientDlg::threadWatchData()    //远程监控界面线程
 					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);  //跳转到流开头
+					if ((HBITMAP)m_image != NULL)
+					{
+						m_image.Destroy();
+					}
 					m_image.Load(pStream);                     //load从指定文件加载图像
 					m_isFull = true;
 				}
@@ -594,10 +599,13 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)//④实现�
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()    //  远程监控按钮
 {
 	// TODO: 在此添加控件通知处理程序代码
+	m_isClosed = false;
 	CWatchDialog dlg(this);
-	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
+	HANDLE hThread =  (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE); //防止启用多个线程，点击一次后禁用按钮
 	dlg.DoModal();     //模态就防止了多次点击按钮
+	m_isClosed = true;
+	WaitForSingleObject(hThread, 500);
 }
 
 

@@ -240,7 +240,7 @@ public:
 	}
 
 
-#define BUFFER_SIZE 1024000
+#define BUFFER_SIZE 2048000
 	int DealCommand()
 	{
 		if (m_sock == -1)
