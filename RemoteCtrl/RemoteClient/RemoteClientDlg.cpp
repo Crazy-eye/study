@@ -561,7 +561,7 @@ void CRemoteClientDlg::OnRunFile()  // 打开(运行)文件
 	}
 }
 
-LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)       //④实现消息相应函数
+LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)//④实现消息相应函数
 {
 	int ret = 0;
 	int cmd = wParam >> 1;
@@ -571,6 +571,11 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)       //④
 	{
 		CString strFile = (LPCSTR)lParam;
 		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	}
+	break;
+	case 5: //鼠标操作
+	{
+		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
 	}
 	break;
 	case 6:

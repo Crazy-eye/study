@@ -177,47 +177,48 @@ int MouseEvent()      //鼠标操作
     MOUSEEV mouse;
     if (CServerSocket::getInstance()->GetMouseEvent(mouse))
     {
-        DWORD nFlage = 0;//标志 低四位1 2 4 8 用于button 16 32 64 128用于action
+        DWORD nFlags = 0;//标志 低四位1 2 4 8 用于button 16 32 64 128用于action
 
         switch (mouse.nButton)
         {
         case 0://左键
-            nFlage = 1;
+            nFlags = 1;
             break;
         case 1://右键
-            nFlage = 2;
+            nFlags = 2;
             break;
         case 2://中键
-            nFlage = 4;
+            nFlags = 4;
             break;
         case 4://没有按键
-            nFlage = 8;
+            nFlags = 8;
             break;
         default:
             break;
         }
-        if (nFlage != 8)
+        if (nFlags != 8)
         {
             SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);   //把光标移到屏幕的指定位置
         }
         switch (mouse.nAction)
         {
         case 0://单击
-            nFlage |= 0x10;
+            nFlags |= 0x10;
             break;
         case 1://双击
-            nFlage |= 0x20;
+            nFlags |= 0x20;
             break;
         case 2://按下
-            nFlage |= 0x40;
+            nFlags |= 0x40;
             break;
         case 3://放开
-            nFlage |= 0x80;
+            nFlags |= 0x80;
             break;
         default:
             break;
         }
-        switch (nFlage)
+        TRACE("mouse event:%08X x %d y %d\r\n", nFlags,mouse.ptXY.x, mouse.ptXY.y);
+        switch (nFlags)
         {
         case 0x21://左键双击 
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo()); //GetMessageExtraInfo  系统API获取当前线程中额外的信息包括键盘鼠标的信息
