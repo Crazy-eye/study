@@ -334,11 +334,22 @@ unsigned __stdcall threadLockDlg(void* arg)    //子线程  防止在消息循�
     CRect rect;
     rect.left = 0;
     rect.top = 0;
-    rect.right = GetSystemMetrics(SM_CXFULLSCREEN); //获取系统参数(x坐标) 1920
+    rect.right = GetSystemMetrics(SM_CXFULLSCREEN); //获取系统参数(x坐标) 1920    屏幕的宽
     rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);//（本PC测试）1057
-    rect.bottom = LONG(rect.bottom * 1.03);                            //覆盖全屏
+    rect.bottom = LONG(rect.bottom * 1.1);                            //覆盖全屏
     TRACE("right=%d bottom=%d \n", rect.right, rect.bottom);
     dlg.MoveWindow(rect);
+    CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
+    if (pText)
+    {
+        CRect rtText;
+        pText->GetWindowRect(rtText);
+        int nWidth = rtText.Width() / 2; //锁屏文字的宽除以2
+        int x = (rect.right - nWidth) / 2;
+        int nHeight = rtText.Height();
+        int y = (rect.bottom - nHeight) / 2;
+        pText->MoveWindow(x, y, rtText.Width(), rtText.Height());
+    }
     //置（z轴）顶窗口
     dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);//不改变大小，不移动
 
@@ -366,8 +377,9 @@ unsigned __stdcall threadLockDlg(void* arg)    //子线程  防止在消息循�
             }
         }
     }
-    ShowCursor(true);
-    ::ShowWindow(::FindWindow(_T("Shell-TrayWnd"), NULL), SW_SHOW);
+    ClipCursor(NULL); //鼠标限制为空
+    ShowCursor(true); //恢复鼠标
+    ::ShowWindow(::FindWindow(_T("Shell-TrayWnd"), NULL), SW_SHOW);//恢复任务栏
     dlg.DestroyWindow();
     _endthreadex(0);
     return 0;
@@ -390,7 +402,7 @@ int   UnlockMachine()  //解锁
     //dlg.SendMessage(WM_KEYDOWN, 0x1b, 0x00010001);                //失败
     //::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x1b, 0x00010001);      //全局    失败 线程只接受在线程的信息（不根据对话框和窗口句柄，根据线程）
     PostThreadMessage(threadid, WM_KEYDOWN, 0x1B, 0);               //向指定线程发信息
-    CPacket pack(7, NULL, 0);
+    CPacket pack(8, NULL, 0);
     CServerSocket::getInstance()->Send(pack);
     return 0;
 }
