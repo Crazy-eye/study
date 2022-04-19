@@ -40,6 +40,7 @@ public://原创函数
 private://原创函数
 	CImage m_image;                                    //缓存图片
 	bool m_isFull;                                     //缓存是否满，true表示有缓存
+	bool m_isClosed;                                   //监视线程是否关闭
 	static void threadEntryForWatchData(void* arg);    //监控数据，静待函数不能用this
 	void threadWatchData();                            //成员函数可以用this，方便访问成员函数
 	static void threadEntryForDownFile(void* arg);

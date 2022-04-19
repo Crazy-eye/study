@@ -59,7 +59,7 @@ int MakeDriverInfo()  //检查磁盘分区1==A;2==B;3==C...26==Z
         }
     }
     CPacket pack(1, (BYTE*)result.c_str(), result.size()); //打包
-    Dump((BYTE*)pack.Data(), pack.Size());
+    //Dump((BYTE*)pack.Data(), pack.Size());       
     CServerSocket::getInstance()->Send(pack);
     return 0;
 }
@@ -177,47 +177,48 @@ int MouseEvent()      //鼠标操作
     MOUSEEV mouse;
     if (CServerSocket::getInstance()->GetMouseEvent(mouse))
     {
-        DWORD nFlage = 0;//标志 低四位1 2 4 8 用于button 16 32 64 128用于action
+        DWORD nFlags = 0;//标志 低四位1 2 4 8 用于button 16 32 64 128用于action
 
         switch (mouse.nButton)
         {
         case 0://左键
-            nFlage = 1;
+            nFlags = 1;
             break;
         case 1://右键
-            nFlage = 2;
+            nFlags = 2;
             break;
         case 2://中键
-            nFlage = 4;
+            nFlags = 4;
             break;
         case 4://没有按键
-            nFlage = 8;
+            nFlags = 8;
             break;
         default:
             break;
         }
-        if (nFlage != 8)
+        if (nFlags != 8)
         {
             SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);   //把光标移到屏幕的指定位置
         }
         switch (mouse.nAction)
         {
         case 0://单击
-            nFlage |= 0x10;
+            nFlags |= 0x10;
             break;
         case 1://双击
-            nFlage |= 0x20;
+            nFlags |= 0x20;
             break;
         case 2://按下
-            nFlage |= 0x40;
+            nFlags |= 0x40;
             break;
         case 3://放开
-            nFlage |= 0x80;
+            nFlags |= 0x80;
             break;
         default:
             break;
         }
-        switch (nFlage)
+        TRACE("mouse event:%08X x %d y %d\r\n", nFlags,mouse.ptXY.x, mouse.ptXY.y);
+        switch (nFlags)
         {
         case 0x21://左键双击 
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo()); //GetMessageExtraInfo  系统API获取当前线程中额外的信息包括键盘鼠标的信息
@@ -286,7 +287,7 @@ int SendScreen()
     int nWidth = GetDeviceCaps(hScreen, HORZRES);
     int nHeight = GetDeviceCaps(hScreen, VERTRES);
     screen.Create(nWidth, nHeight, nBitPerPixel);
-    BitBlt(screen.GetDC(), 0, 0, 1920, 1080, hScreen, 0, 0, SRCCOPY);
+    BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight, hScreen, 0, 0, SRCCOPY);
     ReleaseDC(NULL, hScreen);
 
     HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);   //分配可移动的堆内存
@@ -333,11 +334,22 @@ unsigned __stdcall threadLockDlg(void* arg)    //子线程  防止在消息循�
     CRect rect;
     rect.left = 0;
     rect.top = 0;
-    rect.right = GetSystemMetrics(SM_CXFULLSCREEN); //获取系统参数(x坐标) 1920
+    rect.right = GetSystemMetrics(SM_CXFULLSCREEN); //获取系统参数(x坐标) 1920    屏幕的宽
     rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);//（本PC测试）1057
-    rect.bottom = LONG(rect.bottom * 1.03);                            //覆盖全屏
+    rect.bottom = LONG(rect.bottom * 1.1);                            //覆盖全屏
     TRACE("right=%d bottom=%d \n", rect.right, rect.bottom);
     dlg.MoveWindow(rect);
+    CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
+    if (pText)
+    {
+        CRect rtText;
+        pText->GetWindowRect(rtText);
+        int nWidth = rtText.Width() / 2; //锁屏文字的宽除以2
+        int x = (rect.right - nWidth) / 2;
+        int nHeight = rtText.Height();
+        int y = (rect.bottom - nHeight) / 2;
+        pText->MoveWindow(x, y, rtText.Width(), rtText.Height());
+    }
     //置（z轴）顶窗口
     dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);//不改变大小，不移动
 
@@ -365,8 +377,9 @@ unsigned __stdcall threadLockDlg(void* arg)    //子线程  防止在消息循�
             }
         }
     }
-    ShowCursor(true);
-    ::ShowWindow(::FindWindow(_T("Shell-TrayWnd"), NULL), SW_SHOW);
+    ClipCursor(NULL); //鼠标限制为空
+    ShowCursor(true); //恢复鼠标
+    ::ShowWindow(::FindWindow(_T("Shell-TrayWnd"), NULL), SW_SHOW);//恢复任务栏
     dlg.DestroyWindow();
     _endthreadex(0);
     return 0;
@@ -389,7 +402,7 @@ int   UnlockMachine()  //解锁
     //dlg.SendMessage(WM_KEYDOWN, 0x1b, 0x00010001);                //失败
     //::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x1b, 0x00010001);      //全局    失败 线程只接受在线程的信息（不根据对话框和窗口句柄，根据线程）
     PostThreadMessage(threadid, WM_KEYDOWN, 0x1B, 0);               //向指定线程发信息
-    CPacket pack(7, NULL, 0);
+    CPacket pack(8, NULL, 0);
     CServerSocket::getInstance()->Send(pack);
     return 0;
 }
