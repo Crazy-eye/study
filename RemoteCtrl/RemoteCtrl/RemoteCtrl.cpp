@@ -336,7 +336,7 @@ unsigned __stdcall threadLockDlg(void* arg)    //子线程  防止在消息循�
     rect.top = 0;
     rect.right = GetSystemMetrics(SM_CXFULLSCREEN); //获取系统参数(x坐标) 1920    屏幕的宽
     rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);//（本PC测试）1057
-    rect.bottom = LONG(rect.bottom * 1.1);                            //覆盖全屏
+    rect.bottom = LONG(rect.bottom * 1.1);                   //覆盖全屏
     TRACE("right=%d bottom=%d \n", rect.right, rect.bottom);
     dlg.MoveWindow(rect);
     CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
@@ -397,7 +397,7 @@ int LockMachine()   //锁定
     CServerSocket::getInstance()->Send(pack);
     return 0;
 }
-int   UnlockMachine()  //解锁
+int UnlockMachine()  //解锁
 {
     //dlg.SendMessage(WM_KEYDOWN, 0x1b, 0x00010001);                //失败
     //::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x1b, 0x00010001);      //全局    失败 线程只接受在线程的信息（不根据对话框和窗口句柄，根据线程）
@@ -545,4 +545,3 @@ int main()
 
     return nRetCode;
 }
-
